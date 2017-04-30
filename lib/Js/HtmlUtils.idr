@@ -170,8 +170,8 @@ textF : {t:Type} -> List (Attribute t (const a) (const b)) -> (a -> String) -> T
 textF attrs txt = customText "span" attrs (DynA $ \(_**x)=> txt x)
 
 export
-textD : List (Attribute a f g) -> (DPair a f -> String) -> Template a f g
-textD attrs txt = customText "span" attrs (DynA txt)
+textD : List (Attribute a f g) -> ((x:a) -> f x -> String) -> Template a f g
+textD attrs txt = customText "span" attrs (DynA $ \(x**y)=>txt x y )
 
 export
 customNodeWidthPostProc : String -> (DomNode -> GuiCallback a f g -> JS_IO d, d -> JS_IO ()) ->

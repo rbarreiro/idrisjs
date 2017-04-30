@@ -65,7 +65,7 @@ bform {a} {f} {g} {c} attrs (MkForm v0 conv tmpls) =
     convTempl t = (\_,w=> snd w) >$< ((\_,w=>Value w) <$> t)
 
     formContent : List (Template a (FoldState a c) (FormEvent . MError . c))
-    formContent = textD [] (\(x**(z,_))=>errstr z) :: (map convTempl tmpls)
+    formContent = textD [] (\x,(z,_)=>errstr z) :: (map convTempl tmpls)
 
     updParam : (x:a) -> (y:a) -> FoldState a c x -> FoldState a c y
     updParam x y (z,w) = (conv x y z, conv x y <$> w)
@@ -95,6 +95,10 @@ namespace Simple
   export
   onsubmit : {t:Type} -> (b -> c -> d) -> FormAttribute t (const b) (const d) (const c)
   onsubmit fn = OnSubmit (\_,x,y=> fn x y)
+
+  export
+  onsubmit' : {t:Type} -> (c -> d) -> FormAttribute t (const b) (const d) (const c)
+  onsubmit' fn = OnSubmit (\_,_,y=> fn y)
 
 namespace Dependent
   export
