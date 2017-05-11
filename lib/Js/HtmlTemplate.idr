@@ -132,14 +132,14 @@ initAttribute _ n gcb (EventLongPress h) =
   do
     ref <- newJSIORef False
     registEvent
-      (\() => (writeJSIORef ref True >>= \_=> setTimeout (procClickIf ref gcb h ()) 600)) n "mousedown" (pure ())
-    registEvent (\()=>writeJSIORef ref False) n "mouseup" (pure ())
+      (\() => (writeJSIORef ref True >>= \_=> setTimeout (procClickIf ref gcb h ()) 600)) n "pointerdown" (pure ())
+    registEvent (\()=>writeJSIORef ref False) n "pointerup" (pure ())
     pure []
 initAttribute _ n gcb (EventShortPress h) =
   do
     ref <- newJSIORef False
-    registEvent (\() => (writeJSIORef ref True >>= \_=> setTimeout (writeJSIORef ref False) 500)) n "mousedown" (pure ())
-    registEvent (procClickIf ref gcb h) n "mouseup" (pure ())
+    registEvent (\() => (writeJSIORef ref True >>= \_=> setTimeout (writeJSIORef ref False) 500)) n "pointerdown" (pure ())
+    registEvent (procClickIf ref gcb h) n "pointerup" (pure ())
     pure []
 initAttribute _ n gcb (StrAttribute ns name (DynConst x) ) =
   do

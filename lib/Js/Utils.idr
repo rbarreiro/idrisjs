@@ -2,16 +2,6 @@ module Utils
 
 import public Data.Vect
 
-public export
-Nil : Fin 0 -> a
-Nil FZ impossible
-Nil (FS _) impossible
-
-public export
-(::) : a -> (Fin n -> a) -> Fin (S n) -> a
-(::) x f (FS k) = f k
-(::) x f FZ = x
-
 %inline
 public export
 jscall : (fname : String) -> (ty : Type) ->
@@ -125,6 +115,16 @@ makeJSObj ((k,v)::xs) =
   do
     o <- makeJSObj xs
     jscall "%2[%0]=%1" (String -> Ptr -> Ptr -> JS_IO ()) k v o
+    pure o
+
+export
+makeJSNumberObj : List (Double, Ptr) -> JS_IO Ptr
+makeJSNumberObj [] =
+  jscall "{}" (() -> JS_IO Ptr) ()
+makeJSNumberObj ((k,v)::xs) =
+  do
+    o <- makeJSNumberObj xs
+    jscall "%2[%0]=%1" (Double -> Ptr -> Ptr -> JS_IO ()) k v o
     pure o
 
 export

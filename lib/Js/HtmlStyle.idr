@@ -25,8 +25,17 @@ widthF f = CSSAttribute "width" (DynA $ \(_**x) => pixels $ f x)
 margin : Double -> Attribute a f g
 margin x = CSSAttribute "margin" (DynConst $ pixels x)
 
+marginTopF : (a -> Double) -> Attribute a b
+marginTopF f = CSSAttribute "marginTop" (DynA $ \(_**x) => pixels $ f x)
+
 padding : Double -> Attribute a f g
 padding x = CSSAttribute "padding" (DynConst $ pixels x)
+
+paddingTop : Double -> Attribute a f g
+paddingTop x = CSSAttribute "paddingTop" (DynConst $ pixels x)
+
+paddingTopF : (a -> Double) -> Attribute a b
+paddingTopF f = CSSAttribute "paddingTop" (DynA $ \(_**x) => pixels $ f x)
 
 backgroundColor : String -> Attribute a f g
 backgroundColor x = CSSAttribute "background-color" (DynConst x)
