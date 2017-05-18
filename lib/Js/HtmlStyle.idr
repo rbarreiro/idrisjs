@@ -59,6 +59,9 @@ export
 direction : FlexDirection -> FlexOption a f g
 direction x = MkFlexOption $ CSSAttribute "flex-direction" (DynConst $ flexDirectionToString x)
 
+wrap : FlexOption a f g
+wrap = MkFlexOption $ CSSAttribute "flex-wrap" (DynConst $ "wrap")
+
 private
 flexOptToAttr : FlexOption a f g -> Attribute a f g
 flexOptToAttr (MkFlexOption x) = x

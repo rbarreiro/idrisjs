@@ -133,6 +133,10 @@ namespace Circle
   r x = MkCircleOption $ customStrAttr "r" (DynConst $ show x)
 
   export
+  rF : (a->Double) -> CircleOption a b
+  rF f = MkCircleOption $ customStrAttr "r" (DynA $ \(_**x)=> show $ f x)
+
+  export
   cx : Double -> CircleOption a f g
   cx x = MkCircleOption $ customStrAttr "cx" (DynConst $ show x)
 
@@ -191,6 +195,10 @@ namespace Image
   image opts s = Image opts (DynConst s)
 
   export
+  imageF : {t:Type} -> List (ImageOption t (const a) (const b)) -> (a->String) -> SVGElem t (const a) (const b)
+  imageF opts s = Image opts (DynA $ \(_**x) => s x)
+
+  export
   x : Double -> ImageOption a f g
   x p = MkImageOption $ customStrAttr "x" (DynConst $ show  p)
 
@@ -208,19 +216,19 @@ namespace Image
 
   export
   width : Double -> ImageOption a f g
-  width p = MkImageOption $ customStrAttr "width" (DynConst $ show p)
+  width p = MkImageOption $ customStrAttr "width" (DynConst $ show $ max 0 p)
 
   export
   widthF : (a->Double) -> ImageOption a b
-  widthF f = MkImageOption $ customStrAttr "width" (DynA $ \(_**x)=> show $ f x)
+  widthF f = MkImageOption $ customStrAttr "width" (DynA $ \(_**x)=> show $ max 0 $ f x)
 
   export
   height : Double -> ImageOption a f g
-  height p = MkImageOption $ customStrAttr "height" (DynConst $ show p)
+  height p = MkImageOption $ customStrAttr "height" (DynConst $ show $ max 0 p)
 
   export
   heightF : (a->Double) -> ImageOption a b
-  heightF f = MkImageOption $ customStrAttr "height" (DynA $ \(_**x)=> show $ f x)
+  heightF f = MkImageOption $ customStrAttr "height" (DynA $ \(_**x)=> show $ max 0 $ f x)
 
 namespace Text
   export
@@ -332,3 +340,40 @@ svg : List (Attribute a f g) -> List (SVGElem a f g) -> Template a f g
 svg attrs childs =
   customNodeNS svgNS "svg" attrs
     (map svgToTempl childs)
+
+export
+Cast (Fin n) Double where
+  cast x = cast (the Nat $ cast x)
+
+public export
+record Grid (i : Nat) (j : Nat) where
+  constructor MkGrid
+  xcenter : Fin j -> Double
+  ycenter : Fin i -> Double
+  left : Fin j -> Double
+  right : Fin j -> Double
+  top : Fin i -> Double
+  bottom : Fin i -> Double
+  leftInside : Fin j -> Double
+  rightInside : Fin j -> Double
+  topInside : Fin i -> Double
+  bottomInside : Fin i -> Double
+
+export
+centeredSquaresGrid : (i:Nat) -> (j:Nat) -> Double -> Double -> Double -> Double -> Double -> Grid i j
+centeredSquaresGrid i j cellMargin left right top bottom =
+  let side = min ( (bottom - top ) / cast i ) ( ( right - left) / cast j )
+      margin' = if cellMargin < side then cellMargin else 0.0
+      topstart = (bottom - top - cast i * side)/2
+      leftstart = (right - left - cast j * side)/2
+  in MkGrid
+      (\x => (cast x + 0.5) * side + leftstart)
+      (\x => (cast x + 0.5) * side + topstart)
+      (\x => (cast x + 1.0) * side + leftstart)
+      (\x => (cast x + 1.0) * side + leftstart)
+      (\x => (cast x) * side + topstart)
+      (\x => (cast x) * side + topstart)
+      (\x => (cast x + 1.0) * side + margin' + leftstart)
+      (\x => (cast x + 1.0) * side - margin' + leftstart)
+      (\x => (cast x) * side + margin' + topstart)
+      (\x => (cast x) * side - margin' + topstart)
