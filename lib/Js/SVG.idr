@@ -8,6 +8,9 @@ svgNS = "http://www.w3.org/2000/svg"
 xlinkNS : String
 xlinkNS = "http://www.w3.org/1999/xlink"
 
+export
+interface ElemOption (o:(a:Type) -> (f:a->Type) -> (g:a->Type) -> Type) where
+  elemAttribute : (a:Type) -> (f:a->Type) -> (g:a->Type) -> Attribute a f g -> o a f g
 
 export
 interface ShapeOption (o:(a:Type) -> (f:a->Type) -> (g:a->Type) -> Type) where
@@ -29,14 +32,13 @@ export
 data BTextOption : (a:Type) -> (a->Type) -> (a->Type) -> Type where
   MkTextOption : Attribute a f g -> BTextOption a f g
 
+export
+data BGOption : (a:Type) -> (a->Type) -> (a->Type) -> Type where
+  MkGOption : Attribute a f g -> BGOption a f g
 
 export
 ShapeOption BRectOption where
   shapeAttribute _ _ _ x = MkRectOption x
-
-export
-ShapeOption BImageOption where
-  shapeAttribute _ _ _ x = MkImageOption x
 
 export
 ShapeOption BCircleOption where
@@ -46,23 +48,48 @@ export
 ShapeOption BTextOption where
   shapeAttribute _ _ _ x = MkTextOption x
 
+export
+ElemOption BRectOption where
+  elemAttribute _ _ _ x = MkRectOption x
 
 export
-data BGOption : (a:Type) -> (a->Type) -> (a->Type) -> Type where
-  MkGOption : Attribute a f g -> BGOption a f g
+ElemOption BImageOption where
+  elemAttribute _ _ _ x = MkImageOption x
 
+export
+ElemOption BCircleOption where
+  elemAttribute _ _ _ x = MkCircleOption x
+
+export
+ElemOption BTextOption where
+  elemAttribute _ _ _ x = MkTextOption x
+
+export
+ElemOption BGOption where
+  elemAttribute _ _ _ x = MkGOption x
+
+{-
+TransformD : (a:Type) -> (a -> Type) -> Type
+TransformD a f = (x:a) -> (f x) -> Transform
+
+joinTrfD: TransformD a f -> TransformD a f -> TransformD a f
+joinTrfD a b = \x, v => a x v <+> b x v
+-}
 export
 data BSVGElem : (a:Type) -> (a->Type) -> (a->Type) -> Type where
   CMapElem : ((x:a) -> h x -> f x) -> BSVGElem a f g -> BSVGElem a h g
   Circle : List (BCircleOption a f g) -> BSVGElem a f g
   Rect : List (BRectOption a f g) -> BSVGElem a f g
-  Image : List (BImageOption a f g) -> Dyn (DPair a f) String -> BSVGElem a f g
+  Image : List (BImageOption a f g) -> Dyn (DPair a f) String ->
+            BSVGElem a f g
   G : List (BGOption a f g) ->
         ((x:a) -> f x -> List (h x)) ->
               BSVGElem a h g -> BSVGElem a f g
   SG : List (BGOption a f g) ->
         List (BSVGElem a f g) -> BSVGElem a f g
-  Text : List (BTextOption a f g) -> Dyn (DPair a f) String -> BSVGElem a f g
+  Text : List (BTextOption a f g) -> Dyn (DPair a f) String ->
+            BSVGElem a f g
+  SVGTransform :  Attribute a f g -> BSVGElem a f g -> BSVGElem a f g
 
 namespace Dependent
 
@@ -255,26 +282,47 @@ namespace Text
   yF : (a->Double) -> TextOption a b
   yF f = MkTextOption $ customStrAttr "y" (DynA $ \(_**x)=> show $ f x)
 
+  export
+  fontSize : Double -> TextOption a f g
+  fontSize x = MkTextOption $ customStrAttr "font-size" (DynConst $ show x)
+
+  public export
+  data TextAnchor = Start | End | Middle
+
+  anchorToString : TextAnchor -> String
+  anchorToString Start = "start"
+  anchorToString End = "end"
+  anchorToString Middle = "middle"
+
+  export
+  textAnchor : TextAnchor -> TextOption a f g
+  textAnchor p = MkTextOption $ customStrAttr "text-anchor" (DynConst $ anchorToString p)
 
 export
 fill : ShapeOption o => String -> o a f g
 fill {a} {f} {g} p = shapeAttribute a f g $ CSSAttribute "fill" (DynConst p)
 
+{-
 export
-transformSVG : ShapeOption o => Transform -> o a f g
-transformSVG {a} {f} {g} t = shapeAttribute a f g $ transform t
+transformSVGD : ((x:a) -> f x -> Transform) -> BSVGElem a f g -> BSVGElem a f g
+transformSVGD h x = SVGTransform (transformD h) x
+-}
+export
+transformSVGF : {t : Type} -> (a -> Transform) -> BSVGElem t (const a) (const b) -> BSVGElem t (const a) (const b)
+transformSVGF h x = SVGTransform (customStrAttr "transform" (DynA $ \(_**z) => show $ h z )) x
+{-
+export
+transformSVG : Transform -> BSVGElem a f g -> BSVGElem a f g
+transformSVG t x = SVGTransform (transform t) x
+-}
 
 export
-transformSVGF : ShapeOption o => (b -> Transform) -> o a (const b) (const c)
-transformSVGF {a} {b} {c} t = shapeAttribute a (const b) (const c) $ transformF t
+onclickD : ElemOption o => ((x:a) -> f x -> g x) -> o a f g
+onclickD {a} {f} {g} fn = elemAttribute a f g $ onclickD fn
 
 export
-onclickD : ShapeOption o => ((x:a) -> f x -> g x) -> o a f g
-onclickD {a} {f} {g} fn = shapeAttribute a f g $ onclickD fn
-
-export
-onclick : ShapeOption o => {t:Type} -> (b -> c) -> o t (const b) (const c)
-onclick {t} {b} {c} fn = shapeAttribute t (const b) (const c) $ onclick fn
+onclick : ElemOption o => {t:Type} -> (b -> c) -> o t (const b) (const c)
+onclick {t} {b} {c} fn = elemAttribute t (const b) (const c) $ onclick fn
 
 namespace Group
   export
@@ -289,15 +337,6 @@ namespace Group
               SVGElem t (const d) (const c) -> SVGElem t (const b) (const c)
   g o f e = G o (\_,z=>f z) e
 
-
-  export
-  onclickD :{a:Type} -> {f:a->Type} -> {g:a->Type} -> ((x:a) -> f x -> g x) -> BGOption a f g
-  onclickD fn = MkGOption $ onclickD $ fn
-
-
-  export
-  onclick : {t:Type} -> (b -> c) -> GOption t (const b) (const c)
-  onclick fn = MkGOption $ onclick fn
 
 export
 sG :  List (GOption a f g) -> List (SVGElem a f g) -> SVGElem a f g
@@ -318,22 +357,29 @@ gOptToAttr (MkGOption x) = x
 textOptToAttr : TextOption a f g -> Attribute a f g
 textOptToAttr (MkTextOption x) = x
 
+
 covering
 svgToTempl : SVGElem a f g -> Template a f g
 svgToTempl (CMapElem f x) =
   f >$< svgToTempl x
 svgToTempl (Circle opts) =
-  customNodeNS svgNS "circle" (map circleOptToAttr opts) []
+  customNodeNS svgNS "circle" (map circleOptToAttr (r 1::opts)) []
 svgToTempl (Rect opts) =
-  customNodeNS svgNS "rect" (map rectOptToAttr opts) []
+  customNodeNS svgNS "rect" (map rectOptToAttr (width 2 :: height 2 :: x (-1) :: y (-1) :: opts)) []
 svgToTempl (Image opts url) =
-  customNodeNS svgNS "image" (customStrAttrNS xlinkNS "xlink:href" url :: map imageOptToAttr opts) []
+  customNodeNS
+    svgNS
+    "image"
+    (customStrAttrNS xlinkNS "xlink:href" url :: map imageOptToAttr ( width 2 :: height 2 :: x (-1) :: y (-1) :: opts) )
+    []
 svgToTempl (G opts fn childT) =
   listCustomNS svgNS "g" (map gOptToAttr opts) fn (svgToTempl childT)
 svgToTempl (SG opts childs) =
   customNodeNS svgNS "g" (map gOptToAttr opts) (map svgToTempl childs)
 svgToTempl (Text opts str) =
   customTextNS svgNS "text" (map textOptToAttr opts) str
+svgToTempl (SVGTransform a c) =
+  customNodeNS svgNS "g" [a] [svgToTempl c]
 
 export
 svg : List (Attribute a f g) -> List (SVGElem a f g) -> Template a f g
@@ -348,32 +394,56 @@ Cast (Fin n) Double where
 public export
 record Grid (i : Nat) (j : Nat) where
   constructor MkGrid
-  xcenter : Fin j -> Double
-  ycenter : Fin i -> Double
   left : Fin j -> Double
-  right : Fin j -> Double
   top : Fin i -> Double
-  bottom : Fin i -> Double
-  leftInside : Fin j -> Double
-  rightInside : Fin j -> Double
-  topInside : Fin i -> Double
-  bottomInside : Fin i -> Double
+  cellWidth : Fin j -> Double
+  cellHeight : Fin i -> Double
+  marginLeft : Fin j -> Double
+  marginRight : Fin j -> Double
+  marginTop : Fin i -> Double
+  marginBottom : Fin i -> Double
 
 export
 centeredSquaresGrid : (i:Nat) -> (j:Nat) -> Double -> Double -> Double -> Double -> Double -> Grid i j
 centeredSquaresGrid i j cellMargin left right top bottom =
   let side = min ( (bottom - top ) / cast i ) ( ( right - left) / cast j )
       margin' = if cellMargin < side then cellMargin else 0.0
-      topstart = (bottom - top - cast i * side)/2
-      leftstart = (right - left - cast j * side)/2
+      topstart = top + (bottom - top - cast i * side)/2
+      leftstart = left + (right - left - cast j * side)/2
   in MkGrid
-      (\x => (cast x + 0.5) * side + leftstart)
-      (\x => (cast x + 0.5) * side + topstart)
-      (\x => (cast x + 1.0) * side + leftstart)
-      (\x => (cast x + 1.0) * side + leftstart)
-      (\x => (cast x) * side + topstart)
-      (\x => (cast x) * side + topstart)
-      (\x => (cast x + 1.0) * side + margin' + leftstart)
-      (\x => (cast x + 1.0) * side - margin' + leftstart)
-      (\x => (cast x) * side + margin' + topstart)
-      (\x => (cast x) * side - margin' + topstart)
+      (\x => cast x * side + leftstart)
+      (\x => cast x * side + topstart)
+      (const side)
+      (const side)
+      (const margin')
+      (const margin')
+      (const margin')
+      (const margin')
+
+export
+right : Grid i j -> Fin j -> Double
+right g x = left g x + cellWidth g x
+
+export
+bottom : Grid i j -> Fin i -> Double
+bottom g x = top g x + cellHeight g x
+
+export
+xcenter : Grid i j -> Fin j -> Double
+xcenter g x = left g x + cellWidth g x / 2.0
+
+export
+ycenter : Grid i j -> Fin i -> Double
+ycenter g x = top g x + cellHeight g x / 2.0
+
+export
+cellInnerWidth : Grid i j -> Fin j -> Double
+cellInnerWidth g x = cellWidth g x - marginLeft g x - marginRight g x
+
+export
+cellInnerHeigth : Grid i j -> Fin i -> Double
+cellInnerHeigth g x = cellHeight g x - marginTop g x - marginBottom g x
+
+export
+fitToCellTransform : Grid i j -> Fin i -> Fin j -> Transform
+fitToCellTransform g m n = translate (xcenter g n) (ycenter g m) <+> scale (cellInnerWidth g n / 2) (cellInnerHeigth g m / 2)

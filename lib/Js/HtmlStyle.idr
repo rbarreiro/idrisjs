@@ -119,15 +119,28 @@ boxShadow {a} {f} x =
 
 data Transform = MkTransform String
 
+Show Transform where
+  show (MkTransform s) = s
+
+Semigroup Transform where
+  (<+>) (MkTransform a) (MkTransform b) = MkTransform (a ++ b)
+
 translate : Double -> Double -> Transform
 translate x y =
-  MkTransform $ "translate(" ++ show x ++ "px," ++ show y ++ "px)"
+  MkTransform $ "translate(" ++ show x ++ "," ++ show y ++ ")"
+
+scale : Double -> Double -> Transform
+scale x y =
+  MkTransform $ "scale(" ++ show x ++ "," ++ show y ++ ")"
 
 transform : Transform -> Attribute a f g
-transform (MkTransform x) = CSSAttribute "transform" (DynConst x) -- ((\(MkTransform z) => z) <$> getDyn x)
+transform (MkTransform x) = CSSAttribute "transform" (DynConst x)
 
 transformF : (a->Transform) -> Attribute a b
-transformF f = CSSAttribute "transform" (DynA $ \(_**x) => let (MkTransform z) = f x in z) -- ((\(MkTransform z) => z) <$> getDyn x)
+transformF f = CSSAttribute "transform" (DynA $ \(_**x) => let (MkTransform z) = f x in z)
+
+transformD : ((x:a) -> f x -> Transform) -> Attribute a f g
+transformD f = CSSAttribute "transform" (DynA $ \(x**v) => let (MkTransform z) = f x v in z)
 
 public export
 data Position = Static | Fixed Double Double
