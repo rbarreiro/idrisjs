@@ -2,7 +2,7 @@
 Js libraries for idris.
 Due to some dificulties with the default js backend this lib uses its own js backend. This backend is compatible with the default js IO type JS_IO, hence they are interchangeable. The test t8.idr shows the troubles with the idris default backend.
 
-Note: The master branch at idris-dev has a new backend that solve this problems and has a few more improvements, I will delete de backend code from this library after the next idris release.
+Note: The master branch at idris-dev has a new backend that solve this problems and has a few more improvements, I will delete the backend code from this library after the next idris release.
 
 ### To build
 ```shell
