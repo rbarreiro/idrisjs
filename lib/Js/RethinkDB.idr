@@ -1,5 +1,6 @@
 module Js.RethinkDB
 
+import Effects
 import Js.ASync
 import public Js.Json
 import public Js.SimpleData
@@ -66,7 +67,7 @@ toErrAsync x =
     xtoErr (Left z) = debugError z
     xtoErr (Right z) = pure z
 
-export
+--export
 runQuery' : Connection -> Int -> Query a -> ASync (Either String (ISDataTy a))
 runQuery' {a} (MkConnection r c) limit q =
   do
@@ -79,17 +80,17 @@ runQuery' {a} (MkConnection r c) limit q =
         (MkJsFn proc)
         limit
 
-export
+--export
 runQuery : Connection -> Int -> Query a -> ASync (ISDataTy a)
 runQuery conn lim q = toErrAsync $ runQuery' conn lim q
 
 --export
 --getFeed' : Connection -> Query a -> ASync (Either String Cursor (ISDataTy a))
 
-export
-createTable : String -> Connection -> String -> ASync (Either String (HVect []))
-createTable database (MkConnection r c) tableName =
-    procRethinkRes (SObj []) $ MkASync $ \proc =>
+--export
+createTableRaw' : String -> Connection -> String -> ASync (Either String ())
+createTableRaw' database (MkConnection r c) tableName =
+    (map $ map $ \_=> ()) $ err2Either $ MkASync $ \proc =>
       jscall
         "%0.db(%1).tableCreate(%2).run(%3, function(e,c){%4([e,c])}  ) "
         (Ptr -> String -> String -> Ptr -> JsFn (Ptr -> JS_IO ()) -> JS_IO () )
@@ -99,7 +100,10 @@ createTable database (MkConnection r c) tableName =
         c
         (MkJsFn proc)
 
-export
+createTableRaw : String -> Connection -> String -> ASync ()
+createTableRaw db c tbl = toErrAsync $ createTableRaw' db c tbl
+
+--export
 insert : Connection -> Table a -> List (ISDataObj a) -> ASync (Either String (HVect []))
 insert (MkConnection r c) (MkTable database name ptype) vals =
   do
@@ -122,3 +126,20 @@ insert (MkConnection r c) (MkTable database name ptype) vals =
 export
 values : Table a -> Query (SObj a)
 values = Values
+
+
+export
+data RethinkDB : Effect where
+  CreatTable : String -> String -> sig RethinkDB () Connection
+
+public export
+RETHINKDB : (ty : Type) -> EFFECT
+RETHINKDB t = MkEff t RethinkDB
+
+export
+implementation Handler RethinkDB ASync where
+  handle c (CreatTable db tbl) k = do createTableRaw db c tbl ; k () c
+
+export
+createTable : String -> String -> Eff () [RETHINKDB Connection]
+createTable db tbl = call $ CreatTable db tbl

@@ -1,5 +1,6 @@
 module Js.Node
 
+import Effects
 import public Js.ASync
 import public Js.ServiceTypes
 import Data.SortedMap
@@ -33,15 +34,15 @@ handleErr x  =
       Right res => pure res
 
 export
-readFileSync : String -> JS_IO String
-readFileSync file =
+readFileJS_IO : String -> JS_IO String
+readFileJS_IO file =
   do
     fs <- require "fs"
     jscall "%0.readFileSync(%1)" (Ptr -> String -> JS_IO String) fs file
 
 export
-readFile : String -> ASync String
-readFile f =
+readFileASync : String -> ASync String
+readFileASync f =
   do
     map (\x => the String (believe_me x)) $ handleErr $ MkASync $ \proc =>
       do
@@ -50,6 +51,135 @@ readFile f =
           (String -> JsFn (Ptr -> JS_IO ()) -> JS_IO () )
           f
           (MkJsFn $ proc)
+
+
+export
+data FileIO : Effect where
+  ReadFile : String -> sig FileIO String
+
+export
+implementation Handler FileIO ASync where
+  handle () (ReadFile s) k = do x <- readFileASync s; k x ()
+
+public export
+FILEIO : EFFECT
+FILEIO = MkEff () FileIO
+
+export
+readFile : String -> Eff String [FILEIO]
+readFile s = call $ ReadFile s
+
+export
+data Console : Effect where
+  Log : String -> sig Console ()
+
+export
+implementation Handler Console ASync where
+  handle () (Log s) k = do liftJS_IO $ jscall "console.log(%0)" (String -> JS_IO ()) s ; k () ()
+
+public export
+CONSOLE : EFFECT
+CONSOLE = MkEff () Console
+
+export
+log : String -> Eff () [CONSOLE]
+log s = call $ Log s
+
+
+
+
+export
+data RequestState = MkRequestState Ptr Ptr
+
+export
+data WSState = MkWSState Ptr (List String)
+
+export
+data WebSocket : Effect where
+  WSSend : String -> sig WebSocket () WSState WSState
+  WSReceive : sig WebSocket String WSState WSState
+
+public export
+WEBSOCKET : (ty : Type) -> EFFECT
+WEBSOCKET t = MkEff t WebSocket
+{-
+export
+implementation Handler WebSocket ASync where
+  handle (MkWSState ws queue) (WSSend msg) k = do liftJS_IO $ jscall "%0.send(%1)" (Ptr -> String -> JS_IO) ws msg; k () (MkWSState ws queue)
+  handle (MkWSState )
+-}
+
+export
+data Request : Effect where
+  EndRequest : String -> sig Request () RequestState ()
+
+public export
+REQUEST : (ty : Type) -> EFFECT
+REQUEST t = MkEff t Request
+
+export
+implementation Handler Request ASync where
+  handle (MkRequestState req resp) (EndRequest s) k = do liftJS_IO $ jscall "%0.end(%1)" (Ptr -> String -> JS_IO ()) resp s ; k () ()
+
+procReqRaw : (RequestState -> ASync ()) -> Ptr -> JS_IO ()
+procReqRaw handler x =
+  do
+    req <- jscall "%0[0]" (Ptr -> JS_IO Ptr) x
+    resp <- jscall "%0[1]" (Ptr -> JS_IO Ptr) x
+    setASync_ $  handler $ MkRequestState req resp
+
+export
+runServer : (XS : List EFFECT) -> Env ASync XS -> Int ->
+                EffM ASync () (REQUEST RequestState :: XS) (\_ => REQUEST () :: XS) -> JS_IO ()
+runServer xs inits port handler =
+  do
+    http <- require "http"
+    server <- jscall
+                "%0.createServer(function(req, res){return %1([req,res])})"
+                (Ptr -> (JsFn (Ptr -> JS_IO ())) -> JS_IO Ptr )
+                http
+                (MkJsFn $ procReqRaw (\x => runInit (x::inits) handler) )
+    jscall
+      ("%0.listen(%1, function(err){" ++
+       " if(err){" ++
+       "  console.log('Error starting server',err)" ++
+       " }else{" ++
+       "  console.log('server is listnening on port', %1)" ++
+       "}" ++
+       "})")
+      (Ptr -> Int -> JS_IO ()) server port
+
+{-
+export
+runServerWithWS : (XS : List EFFECT) -> Env ASync XS -> Int ->
+                EffM ASync () (REQUEST RequestState :: XS) (\_ => REQUEST () :: XS) -> JS_IO ()
+runServerWithWS xs inits port handler =
+  do
+    http <- require "http"
+    webSocketServer <- jscall "require('ws').Server" (() -> JS_IO Ptr) ()
+    server <- jscall
+                "%0.createServer(function(req, res){return %1([req,res])})"
+                (Ptr -> (JsFn (Ptr -> JS_IO ())) -> JS_IO Ptr )
+                http
+                (MkJsFn $ procReqRaw (\x => runInit (x::inits) handler) )
+    wss <- liftJS_IO $ jscall "new %0({server: %1})" (Ptr -> Ptr -> JS_IO Ptr) webSocketServer server
+
+    jscall
+      ("%0.listen(%1, function(err){" ++
+       " if(err){" ++
+       "  console.log('Error starting server',err)" ++
+       " }else{" ++
+       "  console.log('server is listnening on port', %1)" ++
+       "}" ++
+       "})")
+      (Ptr -> Int -> JS_IO ()) server port
+-}
+
+export
+endRequest : String -> Eff () [REQUEST RequestState] [REQUEST ()]
+endRequest s = call $ EndRequest s
+
+{-
 
 export
 data Request = MkRequest Ptr
@@ -74,6 +204,10 @@ error 400 (MkRequest p) =
   do
     jscall "%0[1].writeHead(400,{'Content-Type': 'text/plain'})" (Ptr->JS_IO ()) p
     jscall "%0[1].end(%1)" (Ptr -> String -> JS_IO ()) p "400 Bad Request"
+error err (MkRequest p) =
+  do
+    jscall "%0[1].writeHead(%1,{'Content-Type': 'text/plain'})" (Ptr -> Int -> JS_IO ()) p err
+    jscall "%0[1].end(%1)" (Ptr -> String -> JS_IO ()) p (show err)
 
 public export
 data HttpHandler = HandleGet String (JS_IO String)
@@ -180,8 +314,8 @@ setupWS url wss wsservices =
       url
 
 export
-runServer : Int -> List HttpHandler -> List WSHandler -> ASync ()
-runServer port services wsservices =
+runServerASync : Int -> List HttpHandler -> List WSHandler -> ASync ()
+runServerASync port services wsservices =
   do
     http <- liftJS_IO $ require "http"
     url <- liftJS_IO $ require "url"
@@ -233,3 +367,21 @@ httpRequest host port path method body =
 export
 httpGet : String -> Int -> String -> ASync String
 httpGet host port path = httpRequest host port path "GET" Nothing
+
+
+export
+data HttpServer : Effect where
+  RunServer : Int -> List HttpHandler -> List WSHandler -> sig HttpServer ()
+
+export
+implementation Handler HttpServer ASync where
+  handle () (RunServer port hdl wsHdl) k = do runServerASync port hdl wsHdl ; k () ()
+
+public export
+HTTPSERVER : EFFECT
+HTTPSERVER = MkEff () HttpServer
+
+export
+runServer : Int -> List HttpHandler -> List WSHandler -> Eff () [HTTPSERVER]
+runServer port handlers wsHandlers = call $ RunServer port handlers wsHandlers
+-}
