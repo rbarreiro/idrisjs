@@ -391,26 +391,86 @@ export
 Cast (Fin n) Double where
   cast x = cast (the Nat $ cast x)
 
+export
+Cast Double Nat where
+  cast x = cast (the Integer $ cast x)
+
 public export
-record Grid (i : Nat) (j : Nat) where
-  constructor MkGrid
-  left : Fin j -> Double
-  top : Fin i -> Double
-  cellWidth : Fin j -> Double
-  cellHeight : Fin i -> Double
-  marginLeft : Fin j -> Double
-  marginRight : Fin j -> Double
-  marginTop : Fin i -> Double
-  marginBottom : Fin i -> Double
+record Cell where
+  constructor MkCellBase
+  cleft : Double
+  ctop : Double
+  cwidth : Double
+  cheight : Double
+  cmarginLeft : Double
+  cmarginRight : Double
+  cmarginTop : Double
+  cmarginBottom : Double
+
+export
+cbottom : Cell -> Double
+cbottom x = ctop x + cheight x
+
+export
+cright : Cell -> Double
+cright x = cleft x + cwidth x
+
+export
+cXcenter : Cell -> Double
+cXcenter x = cleft x + cmarginLeft x + (cwidth x - cmarginLeft x - cmarginRight x) /2
+
+export
+cYcenter : Cell -> Double
+cYcenter x = ctop x + cmarginTop x + (cheight x - cmarginTop x - cmarginBottom x) /2
+
+export
+cinnerWidth : Cell -> Double
+cinnerWidth x = cwidth x - cmarginLeft x - cmarginRight x
+
+export
+cinnerHeigth : Cell -> Double
+cinnerHeigth x = cheight x - cmarginTop x - cmarginBottom x
+
+export
+fitToCellTransform : Cell -> Transform
+fitToCellTransform x = translate (cXcenter x) (cYcenter x) <+> scale (cinnerWidth x / 2) (cinnerHeigth x / 2)
+
+public export
+mkCell : Double -> Double -> Double -> Double -> Double -> Cell
+mkCell left top width height margin = MkCellBase left top width height margin margin margin margin
+
+
+public export
+Grid : Nat -> Nat -> Type
+Grid i j = Fin i -> Fin j -> Cell
+
+public export
+Flow : Type
+Flow = Nat -> Cell
+
+export
+bestFitFlowCentered : Double -> Double -> Double -> Double -> Double -> Double -> Flow
+bestFitFlowCentered cellWidth cellHeight margin top left right =
+  let cols = cast $ (right - left) / cellHeight
+      leftstart = left + (right - left - cast cols * cellWidth)/2
+  in \z => mkCell
+            (leftstart + (cast $ z `mod` cols) * cellWidth)
+            (top * (cast $ z `div` cols) * cellHeight)
+            cellWidth
+            cellHeight
+            margin
+
 
 export
 centeredSquaresGrid : (i:Nat) -> (j:Nat) -> Double -> Double -> Double -> Double -> Double -> Grid i j
 centeredSquaresGrid i j cellMargin left right top bottom =
   let side = min ( (bottom - top ) / cast i ) ( ( right - left) / cast j )
-      margin' = if cellMargin < side then cellMargin else 0.0
+      margin' = if cellMargin * 3 < side then cellMargin else 0.0
       topstart = top + (bottom - top - cast i * side)/2
       leftstart = left + (right - left - cast j * side)/2
-  in MkGrid
+  in (\x,y => mkCell (cast y * side + leftstart) (cast x * side + topstart) side side margin')
+{-
+  MkGrid
       (\x => cast x * side + leftstart)
       (\x => cast x * side + topstart)
       (const side)
@@ -419,7 +479,8 @@ centeredSquaresGrid i j cellMargin left right top bottom =
       (const margin')
       (const margin')
       (const margin')
-
+-}
+{-
 export
 right : Grid i j -> Fin j -> Double
 right g x = left g x + cellWidth g x
@@ -447,3 +508,4 @@ cellInnerHeigth g x = cellHeight g x - marginTop g x - marginBottom g x
 export
 fitToCellTransform : Grid i j -> Fin i -> Fin j -> Transform
 fitToCellTransform g m n = translate (xcenter g n) (ycenter g m) <+> scale (cellInnerWidth g n / 2) (cellInnerHeigth g m / 2)
+-}
