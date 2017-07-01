@@ -9,11 +9,11 @@ public export
 data Label : String -> Type -> Type where
   MkLabel : (s : String) -> a -> Label s a
 
-infixr 2 :=
+infixr 2 |=
 
 export
-(:=) : (s : String) -> a -> Label s a
-(:=) x y = MkLabel x y
+(|=) : (s : String) -> a -> Label s a
+(|=) x y = MkLabel x y
 
 public export
 data Alt : Vect n Type -> Type where

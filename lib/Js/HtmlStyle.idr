@@ -1,29 +1,75 @@
 module HtmlStyle
 
-import Js.HtmlTemplate
-import Js.HtmlUtils
-import Data.Fin
+
+import public Js.VirtualDom
+import Js.Html
 
 %access export
+
+private
+listStyleToStyle : List Style -> Style
+listStyleToStyle [] = Nil
+listStyleToStyle (x::xs) = x :: listStyleToStyle xs
+
 
 private
 pixels : Double -> String
 pixels x = show x ++ "px"
 
-height : Double -> Attribute a f g
-height x = CSSAttribute "height" (DynConst $ pixels x)
+height : Double -> Style
+height x = mkStyle "height" (pixels x)
 
-heightF : (a->Double) -> Attribute a b
-heightF f = CSSAttribute "height" (DynA $ \(_**x) => pixels $ f x)
+width: Double -> Style
+width x = mkStyle "width" (pixels x)
 
-width : Double -> Attribute a f g
-width x = CSSAttribute "width" (DynConst $ pixels x)
+margin : Double -> Style
+margin x = mkStyle "margin" (pixels x)
 
-widthF : (a->Double) -> Attribute a b
-widthF f = CSSAttribute "width" (DynA $ \(_**x) => pixels $ f x)
+data Transform = MkTransform String
 
-margin : Double -> Attribute a f g
-margin x = CSSAttribute "margin" (DynConst $ pixels x)
+Show Transform where
+  show (MkTransform s) = s
+
+Semigroup Transform where
+  (<+>) (MkTransform a) (MkTransform b) = MkTransform (a ++ b)
+
+translate : Double -> Double -> Transform
+translate x y =
+  MkTransform $ "translate(" ++ show x ++ "," ++ show y ++ ")"
+
+scale : Double -> Double -> Transform
+scale x y =
+  MkTransform $ "scale(" ++ show x ++ "," ++ show y ++ ")"
+
+transform : Transform -> Style
+transform (MkTransform x) = mkStyle "transform" x
+
+
+public export
+data FlexDirection = Row | Column
+
+flexDirectionToString : FlexDirection -> String
+flexDirectionToString Row = "row"
+flexDirectionToString Column = "column"
+
+export
+data FlexOption = MkFlexOption Style
+
+export
+direction : FlexDirection -> FlexOption
+direction x = MkFlexOption $  mkStyle "flex-direction" (flexDirectionToString x)
+
+wrap : FlexOption
+wrap = MkFlexOption $ mkStyle "flex-wrap" "wrap"
+
+
+flex : List FlexOption -> Style
+flex opts =
+  [mkStyle "display" "flex", listStyleToStyle $ map (\(MkFlexOption x) => x) opts]
+
+
+{-
+
 
 marginTopF : (a -> Double) -> Attribute a b
 marginTopF f = CSSAttribute "marginTop" (DynA $ \(_**x) => pixels $ f x)
@@ -44,31 +90,6 @@ backgroundColorF : (a->String) -> Attribute a b
 backgroundColorF f = CSSAttribute "background-color" (DynA $ \(_**x)=>f x)
 
 
-public export
-data FlexDirection = Row | Column
-
-flexDirectionToString : FlexDirection -> String
-flexDirectionToString Row = "row"
-flexDirectionToString Column = "column"
-
-export
-data FlexOption : (a:Type) -> (a->Type) -> (a->Type) -> Type where
-  MkFlexOption : Attribute a f g -> FlexOption a f g
-
-export
-direction : FlexDirection -> FlexOption a f g
-direction x = MkFlexOption $ CSSAttribute "flex-direction" (DynConst $ flexDirectionToString x)
-
-wrap : FlexOption a f g
-wrap = MkFlexOption $ CSSAttribute "flex-wrap" (DynConst $ "wrap")
-
-private
-flexOptToAttr : FlexOption a f g -> Attribute a f g
-flexOptToAttr (MkFlexOption x) = x
-
-flex : List (FlexOption a f g) -> Attribute a f g
-flex x =
-  GroupAttribute $ CSSAttribute "display" (pure "flex") :: map flexOptToAttr x -- CSSAttribute  dir]
 
 
 data BoxShadowOption : (a:Type) -> (a->Type) -> (a->Type) -> Type where
@@ -117,24 +138,6 @@ boxShadow {a} {f} x =
     args : BoxShadowArguments a f
     args = boxShadowOptionsToArgs x
 
-data Transform = MkTransform String
-
-Show Transform where
-  show (MkTransform s) = s
-
-Semigroup Transform where
-  (<+>) (MkTransform a) (MkTransform b) = MkTransform (a ++ b)
-
-translate : Double -> Double -> Transform
-translate x y =
-  MkTransform $ "translate(" ++ show x ++ "," ++ show y ++ ")"
-
-scale : Double -> Double -> Transform
-scale x y =
-  MkTransform $ "scale(" ++ show x ++ "," ++ show y ++ ")"
-
-transform : Transform -> Attribute a f g
-transform (MkTransform x) = CSSAttribute "transform" (DynConst x)
 
 transformF : (a->Transform) -> Attribute a b
 transformF f = CSSAttribute "transform" (DynA $ \(_**x) => let (MkTransform z) = f x in z)
@@ -166,3 +169,4 @@ namespace UserSelect
   userSelect None = CSSAttribute "user-select" $ DynConst "none"
   userSelect Text = CSSAttribute "user-select" $ DynConst "text"
   userSelect All = CSSAttribute "user-select" $ DynConst "all"
+  -}

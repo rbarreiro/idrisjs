@@ -1,58 +1,74 @@
 
 import Effects
-import Js.Browser
-import Js.Forms
+import Js.Dom
+import Data.Vect
+import Js.HtmlEvents
+import Js.HtmlAttributes
+import Debug.Trace
 
 data TodoAction : Nat -> Type where
-  TodoAdd : String -> TodoAction n
+  TodoAdd : TodoAction n
+  TodoChangeInputString : String -> TodoAction n
   TodoRemove : Fin n -> TodoAction n
 
+record TodoState (n : Nat) where
+  constructor MkTodoState
+  todos : Vect n String
+  inputString : String
+
+removeTodo : Fin (S n) -> TodoState (S n) -> TodoState n
+removeTodo i (MkTodoState tds inps) = MkTodoState (deleteAt i tds) inps
+
+addTodo : TodoState n -> TodoState (S n)
+addTodo (MkTodoState tds inps) = MkTodoState (inps :: tds) ""
+
 Gui : Nat -> Type
-Gui = GuiRef Nat (\n=>Vect n String) TodoAction
+Gui = DGuiRef Nat TodoState TodoAction
 
-vwTasks : Template Nat (\n=>Vect n String) Fin
-vwTasks =
-  vectOnDivIndex
-    []
-    (\x => x)
-    (\_,x => x)
-    (div [] $ [ button [onclickD (\_,(i,_) => i)] "x"
-              , textD [] (\_,(_,x) => x)
-              ]
-    )
+vwTasks : Vect n String -> Html (TodoAction n)
+vwTasks todos =
+  let idxTodos = zip range todos
+  in div [] (map renderTodo $ toList idxTodos)
+  where
+    renderTodo : (Fin n, String) -> Html (TodoAction n)
+    renderTodo (idx, s) =
+      div [] [button [onclick (TodoRemove idx)] "x", text s]
 
-vw : Template Nat (\n => Vect n String) TodoAction
-vw =
+vw : TodoState n -> Html (TodoAction n)
+vw st =
   div
     []
-    [ bform [onsubmit (\_,_,x => TodoAdd x)] textform
-    , (\n, pos => TodoRemove pos) <$> vwTasks
+    [ form [] TodoAdd [input [onChange TodoChangeInputString, value $ inputString st]]
+    , vwTasks $ todos st
     ]
 
-
+total
 lenAfterAction : (n : Nat) -> TodoAction n -> Nat
-lenAfterAction n (TodoAdd _) = S n
+lenAfterAction n TodoAdd = S n
 lenAfterAction (S n) (TodoRemove _) = n
+lenAfterAction n (TodoChangeInputString _) = n
 
 
-procAct : (a:TodoAction n) -> Eff () [HTML (Gui n)] [HTML (Gui (lenAfterAction n a))]
-procAct (TodoAdd s) =
-  updateGuiM (s::)
+procAct : (a:TodoAction n) -> Effects.TransEff.Eff () [DOM (Gui n)] [DOM (Gui (lenAfterAction n a))]
+procAct TodoAdd =
+  domUpdateM addTodo
 procAct {n=S m} (TodoRemove i) =
-  updateGuiM (deleteAt i)
+  domUpdateM (removeTodo i)
+procAct (TodoChangeInputString s) =
+  domUpdate (record {inputString = s})
 
 
-pageLoop : Eff () [HTML (Gui m)] [HTML (Gui n)]
+pageLoop : Eff () [DOM (Gui m)] [DOM (Gui n)]
 pageLoop =
   do
     x <- getInput
     procAct x
     pageLoop
 
-page : Eff () [HTML ()] [HTML (Gui 0)]
+page : Eff () [DOM ()] [DOM (Gui 0)]
 page =
   do
-    initBodyM [] [] vw
+    initBodyM vw (MkTodoState [] "")
     pageLoop
 
 main : JS_IO ()

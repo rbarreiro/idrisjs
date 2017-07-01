@@ -1,6 +1,10 @@
 module Js.ASync
 
+import Effects
 import public Js.Utils
+
+%include JavaScript "js/async.js"
+%include Node "js/async.js"
 
 public export
 data ASync : Type -> Type where
@@ -51,6 +55,46 @@ Monad ASync where
   (>>=) (MkASync stepx) f =
     MkASync $ \onevt => stepx (\x => let MkASync stepf = f x in stepf onevt )
 
+
+export
+data JSIOFifoQueue : (b : Type) -> Type where
+  MkJSIOFifoQueue : Ptr -> JSIOFifoQueue a
+
+export
+newJSIOFifoQueue : (x : Type) -> JS_IO (JSIOFifoQueue x)
+newJSIOFifoQueue _ =
+  MkJSIOFifoQueue <$> jscall "{queue: [], callback: undefined}" (JS_IO Ptr)
+
+export
+putInQueue : a -> JSIOFifoQueue a -> JS_IO ()
+putInQueue x (MkJSIOFifoQueue q) =
+  jscall
+    "$JSLIB$async.putInQueue(%0,%1)"
+    (Ptr -> Ptr -> JS_IO ())
+    (believe_me x)
+    q
+
+export
+getQueuePtr : JSIOFifoQueue a -> Ptr
+getQueuePtr (MkJSIOFifoQueue q) = q
+
+export
+getFromQueue : JSIOFifoQueue a -> ASync a
+getFromQueue (MkJSIOFifoQueue q) =
+  MkASync $ \proc =>
+    believe_me <$>
+      jscall
+        "$JSLIB$async.getFromQueue(%0, %1)"
+        (Ptr -> JsFn (Ptr -> JS_IO ()) -> JS_IO Ptr)
+        q
+        (MkJsFn (\x => proc $ believe_me x) )
+
+export
+implementation Handler Console ASync where
+  handle () (Log s) k = do liftJS_IO $ jscall "console.log(%0)" (String -> JS_IO ()) s ; k () ()
+
+
+{-
 export
 both : ASync a -> ASync a -> ASync a
 both (MkASync s1) (MkASync s2) =
@@ -79,3 +123,4 @@ each proc (MkCursor _ e) = e proc
 export
 close : Cursor a -> JS_IO ()
 close (MkCursor x _) = x
+-}

@@ -1,6 +1,8 @@
 module Utils
 
+import Effects
 import public Data.Vect
+
 
 %inline
 public export
@@ -100,12 +102,14 @@ readJSList x =
 
 export
 makeJSList : List Ptr -> JS_IO Ptr
+--makeJSList x = x
 makeJSList [] = jscall "[]" (() -> JS_IO Ptr) ()
 makeJSList (x::xs) =
   do
     res <- makeJSList xs
     jscall "%1.unshift(%0)" (Ptr -> Ptr -> JS_IO ()) x res
     pure res
+
 
 export
 makeJSObj : List (String, Ptr) -> JS_IO Ptr
@@ -130,3 +134,16 @@ makeJSNumberObj ((k,v)::xs) =
 export
 makeJSStringObj : List (String, String) -> JS_IO Ptr
 makeJSStringObj xs = makeJSObj $ map (\(x,y)=>(x,believe_me y)) xs
+
+
+public export
+data Console : Effect where
+  Log : String -> sig Console ()
+
+public export
+CONSOLE : EFFECT
+CONSOLE = MkEff () Console
+
+export
+log : String -> Eff () [CONSOLE]
+log s = call $ Log s

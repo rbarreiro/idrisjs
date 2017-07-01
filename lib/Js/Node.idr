@@ -69,23 +69,6 @@ export
 readFile : String -> Eff String [FILEIO]
 readFile s = call $ ReadFile s
 
-export
-data Console : Effect where
-  Log : String -> sig Console ()
-
-export
-implementation Handler Console ASync where
-  handle () (Log s) k = do liftJS_IO $ jscall "console.log(%0)" (String -> JS_IO ()) s ; k () ()
-
-public export
-CONSOLE : EFFECT
-CONSOLE = MkEff () Console
-
-export
-log : String -> Eff () [CONSOLE]
-log s = call $ Log s
-
-
 
 
 export

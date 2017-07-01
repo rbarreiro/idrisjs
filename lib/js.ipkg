@@ -4,15 +4,14 @@ pkgs = contrib, lightyear, effects, pruviloj
 
 modules = Js.ASync
 	, Js.Utils
-        , Js.Browser
-        , Js.BrowserForeigns
-        , Js.BrowserDom
+	, Js.VirtualDom
+	, Js.Html
+	, Js.HtmlAttributes
+	, Js.HtmlEvents
 	, Js.HtmlStyle
-	, Js.HtmlTemplate
-        , Js.Forms
-        , Js.HtmlUtils
+	, Js.Dom
+	, Js.BrowserForeigns
         , Js.BrowserNetwork
-	, Js.SVG
         , Js.Json
         , Js.ServiceTypes
         , Js.Node
@@ -21,3 +20,6 @@ modules = Js.ASync
         , Js.RethinkDB
         , Js.Typeable
 	, Js.Cordova
+	, Js.SVG
+
+objs = virtualdom.js, async.js

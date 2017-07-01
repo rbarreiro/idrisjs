@@ -1,7 +1,7 @@
 module Main
 
-import Js.Browser
-import Js.Forms
+import Js.Dom
+import Js.HtmlEvents
 import Effects
 import Effect.State
 
@@ -11,10 +11,10 @@ data Input = Set
 Gui : Type
 Gui = GuiRef String Input
 
-vw : Template String Input
-vw = div [] [form' Set [] [textinput [onchange' Change]], textF [] id]
+vw : String -> Html Input
+vw s = div [] [form [] Set [input [onChange Change]], div [] [text s]]
 
-pageLoop : Eff () [HTML Gui, STATE String]
+pageLoop : Effects.SimpleEff.Eff () [DOM Gui, STATE String, CONSOLE]
 pageLoop =
   do
     x <- getInput
@@ -22,15 +22,15 @@ pageLoop =
       Set =>
         do
           s <- get
-          putGui s
+          domPut s
       Change s =>
         put s
     pageLoop
 
-page : Eff () [HTML (), STATE String] [HTML Gui, STATE String]
+page : Eff () [DOM (), STATE String, CONSOLE] [DOM Gui, STATE String, CONSOLE]
 page =
   do
-    initBody [] "" vw
+    initBody [] vw ""
     pageLoop
 
 main : JS_IO ()
