@@ -4,6 +4,7 @@ import Js.VirtualDom
 import Js.Html
 import Js.HtmlStyle
 import Data.Fin
+import Js.Utils
 
 public export
 SVG : Type -> Type
@@ -110,11 +111,11 @@ namespace Text
 
   export
   x : Double -> Attribute 'Text a
-  x p = stringAttribute "x" $ show $ max 0 p
+  x p = stringAttribute "x" $ show p
 
   export
   y : Double -> Attribute 'Text a
-  y p = stringAttribute "y" $ show $ max 0 p
+  y p = stringAttribute "y" $ show p
 
   export
   fontSize : Double -> Attribute 'Text a
@@ -172,6 +173,13 @@ export
 onclick : SVGAllAttribute o => a -> Attribute o a
 onclick x = eventListenerAttribute "click" (\_ => pure x)
 
+export
+onlongpress : SVGAllAttribute o => a -> Attribute o a
+onlongpress x = customEventListenerAttribute "longpress" (jscall "$JSLIB$html.addLongPressEventListener(%0)" (Ptr -> JS_IO ())) (\_ => pure x)
+
+export
+onshortpress : SVGAllAttribute o => a -> Attribute o a
+onshortpress x = customEventListenerAttribute "shortpress" (jscall "$JSLIB$html.addShortPressEventListener(%0)" (Ptr -> JS_IO ())) (\_ => pure x)
 
 export
 Cast (Fin n) Double where
@@ -245,7 +253,6 @@ bestFitFlowCentered cellWidth cellHeight margin top left right z =
             cellWidth
             cellHeight
             margin
-
 
 export
 centeredSquaresGrid : (i:Nat) -> (j:Nat) -> Double -> Double -> Double -> Double -> Double -> Grid i j

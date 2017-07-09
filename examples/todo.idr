@@ -2,9 +2,6 @@
 import Effects
 import Js.Dom
 import Data.Vect
-import Js.HtmlEvents
-import Js.HtmlAttributes
-import Debug.Trace
 
 data TodoAction : Nat -> Type where
   TodoAdd : TodoAction n
@@ -38,7 +35,7 @@ vw : TodoState n -> Html (TodoAction n)
 vw st =
   div
     []
-    [ form [] TodoAdd [input [onChange TodoChangeInputString, value $ inputString st]]
+    [ form [] TodoAdd [input [onchange TodoChangeInputString, value $ inputString st]]
     , vwTasks $ todos st
     ]
 

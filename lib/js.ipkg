@@ -6,8 +6,6 @@ modules = Js.ASync
 	, Js.Utils
 	, Js.VirtualDom
 	, Js.Html
-	, Js.HtmlAttributes
-	, Js.HtmlEvents
 	, Js.HtmlStyle
 	, Js.Dom
 	, Js.BrowserForeigns
@@ -22,4 +20,4 @@ modules = Js.ASync
 	, Js.Cordova
 	, Js.SVG
 
-objs = virtualdom.js, async.js
+objs = virtualdom.js, async.js, html.js

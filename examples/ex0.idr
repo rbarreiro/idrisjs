@@ -1,7 +1,6 @@
 module Main
 
 import Js.Dom
-import Js.HtmlEvents
 import Effects
 import Effect.State
 
@@ -12,7 +11,7 @@ Gui : Type
 Gui = GuiRef String Input
 
 vw : String -> Html Input
-vw s = div [] [form [] Set [input [onChange Change]], div [] [text s]]
+vw s = div [] [form [] Set [input [onchange Change]], div [] [text s]]
 
 pageLoop : Effects.SimpleEff.Eff () [DOM Gui, STATE String, CONSOLE]
 pageLoop =

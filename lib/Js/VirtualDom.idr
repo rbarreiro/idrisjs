@@ -110,13 +110,25 @@ style (MkStyle stl) =
 
 export
 eventListenerAttribute : String -> (Ptr -> JS_IO b) -> Attribute a b
-eventListenerAttribute event convert =
+eventListenerAttribute name read =
   MkAttribute $ unsafePerformIO $
     jscall
       "{type:'e', name:%0, read: %1}"
       (String -> JsFn (Ptr -> JS_IO Ptr) -> JS_IO Ptr)
-      event
-      (MkJsFn $ believe_me convert)
+      name
+      (MkJsFn $ believe_me read)
+
+export
+customEventListenerAttribute : String -> (Ptr -> JS_IO ()) -> (Ptr -> JS_IO b) -> Attribute a b
+customEventListenerAttribute name initE read =
+  MkAttribute $ unsafePerformIO $
+    jscall
+      "{type:'ec', name:%0, init: %1 , read: %2}"
+      (String -> JsFn (Ptr -> JS_IO ()) -> JsFn (Ptr -> JS_IO Ptr) -> JS_IO Ptr)
+      name
+      (MkJsFn $ initE)
+      (MkJsFn $ believe_me read)
+
 
 export
 eventListenerAttributePreventDefault : String -> (Ptr -> JS_IO b) -> Attribute a b
@@ -127,6 +139,7 @@ eventListenerAttributePreventDefault event convert =
       (String -> JsFn (Ptr -> JS_IO Ptr) -> JS_IO Ptr)
       event
       (MkJsFn $ believe_me convert)
+
 
 export
 initialyzeBody : JSIOFifoQueue b -> Node a b -> JS_IO ()

@@ -102,7 +102,6 @@ readJSList x =
 
 export
 makeJSList : List Ptr -> JS_IO Ptr
---makeJSList x = x
 makeJSList [] = jscall "[]" (() -> JS_IO Ptr) ()
 makeJSList (x::xs) =
   do

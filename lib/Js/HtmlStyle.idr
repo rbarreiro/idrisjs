@@ -33,6 +33,10 @@ Show Transform where
 Semigroup Transform where
   (<+>) (MkTransform a) (MkTransform b) = MkTransform (a ++ b)
 
+Monoid Transform where
+  neutral = MkTransform ""
+
+
 translate : Double -> Double -> Transform
 translate x y =
   MkTransform $ "translate(" ++ show x ++ "," ++ show y ++ ")"
@@ -67,6 +71,18 @@ flex : List FlexOption -> Style
 flex opts =
   [mkStyle "display" "flex", listStyleToStyle $ map (\(MkFlexOption x) => x) opts]
 
+public export
+data Position = Static | Fixed Double Double
+
+position : Position -> Style
+position Static = mkStyle "position" "static"
+position (Fixed x y) = [mkStyle "position" "fixed", mkStyle "left" (pixels x), mkStyle "top" (pixels y)]
+
+zIndex : Double -> Style
+zIndex x = mkStyle "z-index" (show x)
+
+backgroundColor : String -> Style
+backgroundColor = mkStyle "background-color"
 
 {-
 
@@ -82,14 +98,6 @@ paddingTop x = CSSAttribute "paddingTop" (DynConst $ pixels x)
 
 paddingTopF : (a -> Double) -> Attribute a b
 paddingTopF f = CSSAttribute "paddingTop" (DynA $ \(_**x) => pixels $ f x)
-
-backgroundColor : String -> Attribute a f g
-backgroundColor x = CSSAttribute "background-color" (DynConst x)
-
-backgroundColorF : (a->String) -> Attribute a b
-backgroundColorF f = CSSAttribute "background-color" (DynA $ \(_**x)=>f x)
-
-
 
 
 data BoxShadowOption : (a:Type) -> (a->Type) -> (a->Type) -> Type where
@@ -139,25 +147,6 @@ boxShadow {a} {f} x =
     args = boxShadowOptionsToArgs x
 
 
-transformF : (a->Transform) -> Attribute a b
-transformF f = CSSAttribute "transform" (DynA $ \(_**x) => let (MkTransform z) = f x in z)
-
-transformD : ((x:a) -> f x -> Transform) -> Attribute a f g
-transformD f = CSSAttribute "transform" (DynA $ \(x**v) => let (MkTransform z) = f x v in z)
-
-public export
-data Position = Static | Fixed Double Double
-
-position : Position -> Attribute a f g
-position Static =
-  CSSAttribute "position" (DynConst "static")
-position (Fixed x y) =
-  groupAttribute [ CSSAttribute "position" (DynConst "fixed")
-                 , CSSAttribute "left" (DynConst $ pixels x)
-                 , CSSAttribute "top" (DynConst $ pixels x)]
-
-zIndex : Int -> Attribute a f g
-zIndex x = CSSAttribute "z-index" (DynConst $ show x)
 
 namespace UserSelect
 
