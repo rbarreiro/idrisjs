@@ -39,7 +39,7 @@ Monoid Transform where
 
 translate : Double -> Double -> Transform
 translate x y =
-  MkTransform $ "translate(" ++ show x ++ "," ++ show y ++ ")"
+  MkTransform $ "translate(" ++ pixels x ++ "," ++ pixels y ++ ")"
 
 scale : Double -> Double -> Transform
 scale x y =
