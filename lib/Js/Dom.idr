@@ -1,13 +1,13 @@
 module Dom
 
-import Effects
+import Control.ST
 import public Js.Html
 import public Js.VirtualDom
 import public Js.ASync
 
-export
-data DGuiRef : (a : Type) -> (f : a -> Type) -> (g : a -> Type) -> a -> Type where
-  MkDGuiRef : ((z:a) -> f z -> Html (g z)) -> JSIOFifoQueue (g x) -> f x -> Html (g x) -> DGuiRef a f g x
+
+data GuiRefData : (a : Type) -> (f : a -> Type) -> (g : a -> Type) -> a -> Type where
+  MkGuiRefData : ((z:a) -> f z -> Html (g z)) -> JSIOFifoQueue (g x) -> f x -> Html (g x) -> GuiRefData a f g x
 
 export
 data DomOption : (a:Type) -> (a->Type) -> (a->Type) -> Type where
@@ -25,27 +25,30 @@ domOptionsToRec : List (DomOption a f g) -> DomOptionRec a f g
 domOptionsToRec [] = MkDomOptionRec Nothing
 domOptionsToRec (OnResize x :: r) = record {onresizeOption = Just x} $ domOptionsToRec r
 
+public export
+interface Dom  (m : Type -> Type) where
+  DomRef : (a:Type) -> (f : a -> Type) -> (g : a -> Type) -> a -> Type
+
+  initBody : ((x:a) -> f x -> Html (g x)) -> (z:a) -> f z -> ST m Var [add (DomRef a f g z)]
+  clearDom : (dom : Var) -> ST m () [remove dom (DomRef a f g z)]
+  domPut : (dom : Var) -> {x:a} -> f x -> ST m () [dom ::: (DomRef a f g x)]
+  domPutM : (dom : Var) -> (y:a) -> f y -> ST m () [dom ::: (DomRef a f g x) :-> (DomRef a f g y)]
+  domGet : (dom : Var) -> {x:a} -> ST m (f x) [dom ::: DomRef a f g x]
+  getInput : (dom : Var) -> {x:a} -> ST m (g x) [dom ::: DomRef a f g x]
 
 export
-data Dom : Effect where
-  InitBody : List (DomOption () (const a) (const b)) -> (a -> Html b) -> a -> sig Dom () () (DGuiRef () (const a) (const b) ())
-  InitBodyM : ((x:a)-> f x -> Html (g x)) -> f z -> sig Dom () () (DGuiRef a f g z)
-  GetInput : sig Dom (g x) (DGuiRef a f g x)
-  DomPut : (x:a) -> f x -> sig Dom () (DGuiRef a f g x)
-  DomPutM : (x:a) -> (g : a->Type) -> f x -> sig Dom () (DGuiRef a f g z) (DGuiRef a f g x)
-  DomGet : sig Dom (f z) (DGuiRef a f g z)
-  DomClear : sig Dom () (DGuiRef a f g z) ()
-  DomPutAnimated : List AnimationOption -> (x:a) -> f x -> sig Dom () (DGuiRef a f g x)
-  ConsoleLog : String -> sig Dom () a
-  Wait : Nat -> sig Dom () a
-  InnerWidth : sig Dom Double a
-  InnerHeight : sig Dom Double a
-  AvailableWidth : sig Dom Double a
-  AvailableHeight : sig Dom Double a
+domUpdate : Dom m => (dom : Var) -> {x:a} -> (f x -> f x) -> ST m () [dom ::: (DomRef {m} a f g x)]
+domUpdate v h =
+  do
+    s <- domGet v
+    domPut v (h s)
 
-public export
-DOM : (ty : Type) -> EFFECT
-DOM t = MkEff t Dom
+export
+domUpdateM : Dom m => (dom : Var) -> (x:a) -> (y:a) -> (f x -> f y) -> ST m () [dom ::: (DomRef {m} a f g x) :-> (DomRef {m} a f g y)]
+domUpdateM v x y h =
+  do
+    s <- domGet v
+    domPutM v y (h s)
 
 setOnResizeOpt : (g : a -> Type) -> Maybe ((x:a) -> g x) -> JSIOFifoQueue (g x) -> JS_IO ()
 setOnResizeOpt g {x} Nothing q =
@@ -62,7 +65,7 @@ setOnResizeOpt g {x} (Just h) q =
 setOpts : DomOptionRec a f g -> JSIOFifoQueue (g x) -> JS_IO ()
 setOpts {g} x q = setOnResizeOpt g (onresizeOption x) q
 
-initBodyRaw : List (DomOption a f g) -> ((x:a) -> f x -> Html (g x) ) -> f z -> JS_IO (DGuiRef a f g z)
+initBodyRaw : List (DomOption a f g) -> ((x:a) -> f x -> Html (g x) ) -> f z -> JS_IO (GuiRefData a f g z)
 initBodyRaw {a} {f} {g} {z} opts render st0 =
   do
     let n0 = render z st0
@@ -70,26 +73,50 @@ initBodyRaw {a} {f} {g} {z} opts render st0 =
     queue <- newJSIOFifoQueue (g z)
     setOpts opts' queue
     initialyzeBody queue n0
-    pure $ MkDGuiRef render queue st0 n0
+    pure $ MkGuiRefData render queue st0 n0
+
 
 export
+implementation Dom ASync where
+  DomRef a f g z =
+    State (GuiRefData a f g z)
+  initBody render a0 start =
+    do
+      guiR <- lift $ liftJS_IO $ initBodyRaw [] render start
+      r <- new guiR
+      pure r
+  clearDom v =
+    do
+      (MkGuiRefData _ _ _ n) <- read v
+      lift $ liftJS_IO $ clearNode n
+      delete v
+
+  domPut v {x} newSt =
+    do
+      (MkGuiRefData render queue st n) <- read v
+      lift $ liftJS_IO $ updateNode n (render x newSt)
+      write v $ MkGuiRefData render queue newSt n
+      pure ()
+  domPutM {g} v x newSt =
+    do
+      (MkGuiRefData render queue st n) <- read v
+      queue <- lift $ liftJS_IO $ newJSIOFifoQueue (g x)
+      n' <- lift $ liftJS_IO $ updateNodeM queue n (render x newSt)
+      write v $ MkGuiRefData render queue newSt n'
+      pure ()
+  domGet v =
+    do
+      (MkGuiRefData render queue st n) <- read v
+      pure st
+  getInput v =
+    do
+      (MkGuiRefData render queue st n) <- read v
+      r <- lift $ getFromQueue queue
+      pure r
+
+{-
+export
 implementation Handler Dom ASync where
-  handle () (InitBody opts render st0) k =
-    do
-      guiR <- liftJS_IO $ initBodyRaw opts (\() => render) st0
-      k () guiR
-  handle () (InitBodyM render st0) k =
-    do
-      guiR <- liftJS_IO $ initBodyRaw [] render st0
-      k () guiR
-  handle (MkDGuiRef render queue st n) GetInput k =
-    do
-      r <- getFromQueue queue
-      k r (MkDGuiRef render queue st n)
-  handle (MkDGuiRef render queue st n) (DomPut x newSt) k =
-    do
-      liftJS_IO $ updateNode n (render x newSt)
-      k () (MkDGuiRef render queue newSt n)
   handle (MkDGuiRef render queue st n) (DomPutM x g newSt) k =
     do
       queue' <- liftJS_IO $ newJSIOFifoQueue (g x)
@@ -117,21 +144,6 @@ implementation Handler Dom ASync where
       x <- liftJS_IO availableHeight_
       k x r
 
-export
-initBody : List (DomOption () (const b) (const c)) -> (b -> Html c) -> b -> Eff () [DOM ()] [DOM (DGuiRef () (const b) (const c) ())]
-initBody opts h s = call $ InitBody opts h s
-
-export
-initBodyM : ({x:a} -> f x -> Html (g x)) -> f z -> Eff () [DOM ()] [DOM (DGuiRef a f g z)]
-initBodyM h s = call $ InitBodyM (\y, w => h {x=y} w) s
-
-export
-getInput : Eff (g z) [DOM (DGuiRef a f g z)]
-getInput = call GetInput
-
-export
-domPut : f z -> Eff () [DOM (DGuiRef a f g z)]
-domPut {z} x = call $ DomPut z x
 
 export
 domPutAnimated : List AnimationOption -> f z -> Eff () [DOM (DGuiRef a f g z)]
@@ -174,9 +186,6 @@ export
 consoleLog : String -> Eff () [DOM a]
 consoleLog s = call $ ConsoleLog s
 
-export
-wait : Nat -> Eff () [DOM a]
-wait millis = call $ Wait millis
 
 export
 innerWidth : Eff Double [DOM a]
@@ -193,13 +202,12 @@ availableWidth = call AvailableWidth
 export
 availableHeight : Eff Double [DOM a]
 availableHeight = call AvailableHeight
-
-namespace Simple
-
-  public export
-  GuiRef : Type -> Type -> Type
-  GuiRef a b = DGuiRef () (const a) (const b) ()
-
+-}
+{-
+export
+DomRef : Dom m  =>  Type -> Type -> Type
+DomRef {m} a b = DDomRef {m} () (const a) (const b) ()
+-}
 -- Utils -------------
 
 export

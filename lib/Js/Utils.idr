@@ -1,6 +1,6 @@
 module Utils
 
-import Effects
+import Control.ST
 import public Data.Vect
 
 
@@ -135,14 +135,10 @@ makeJSStringObj : List (String, String) -> JS_IO Ptr
 makeJSStringObj xs = makeJSObj $ map (\(x,y)=>(x,believe_me y)) xs
 
 
-public export
-data Console : Effect where
-  Log : String -> sig Console ()
-
-public export
-CONSOLE : EFFECT
-CONSOLE = MkEff () Console
+export
+interface Console (m:Type -> Type) where
+    consoleLog : String -> STrans m () xs (const xs)
 
 export
-log : String -> Eff () [CONSOLE]
-log s = call $ Log s
+implementation Console JS_IO where
+  consoleLog s = lift $ jscall "console.log(%0)" (String -> JS_IO ()) s

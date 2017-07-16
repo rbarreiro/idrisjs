@@ -175,6 +175,7 @@ updateNodeM q (MkNode x) (MkNode y) =
       y
     pure $ MkNode x
 
+export
 clearNode : Node a b -> JS_IO ()
 clearNode (MkNode x) = jscall "$JSLIB$virtualdom.clear(%0)" (Ptr -> JS_IO ()) x
 

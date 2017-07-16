@@ -1,6 +1,6 @@
 module Js.ASync
 
-import Effects
+import Control.ST
 import public Js.Utils
 
 %include JavaScript "js/async.js"
@@ -90,37 +90,14 @@ getFromQueue (MkJSIOFifoQueue q) =
         (MkJsFn (\x => proc $ believe_me x) )
 
 export
-implementation Handler Console ASync where
-  handle () (Log s) k = do liftJS_IO $ jscall "console.log(%0)" (String -> JS_IO ()) s ; k () ()
+implementation Console ASync where
+  consoleLog s = lift $ liftJS_IO $ jscall "console.log(%0)" (String -> JS_IO ()) s
 
 
-{-
-export
-both : ASync a -> ASync a -> ASync a
-both (MkASync s1) (MkASync s2) =
-  MkASync $ \onevt =>
-    do
-      s1 onevt
-      s2 onevt
+public export
+interface Wait (m:Type -> Type) where
+    wait : Int -> STrans m () xs (const xs)
 
 export
-data Cursor a = MkCursor (JS_IO ()) ((a -> JS_IO ()) -> JS_IO ())
-
-
-export
-Functor Cursor where
-  map f (MkCursor c oe) = MkCursor c (\onevt => oe (\x => onevt (f x)) )
-
-
-export
-newCursor : (JS_IO ()) -> ((a -> JS_IO ()) -> JS_IO ()) -> Cursor a
-newCursor c e = MkCursor c e
-
-export
-each : (a -> JS_IO ()) -> Cursor a -> JS_IO ()
-each proc (MkCursor _ e) = e proc
-
-export
-close : Cursor a -> JS_IO ()
-close (MkCursor x _) = x
--}
+implementation Wait ASync where
+  wait millis = lift $ setTimeout millis ()

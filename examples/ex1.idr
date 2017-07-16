@@ -1,22 +1,32 @@
+
 module Main
 
 import Js.Dom
 import Control.ST
 import Control.ST.ImplicitCall
 
+data Input = Set
+           | Change String
 
 Gui : Dom m => Type
-Gui {m} = DomRef {m} () (const String) (const String) ()
+Gui {m} = DomRef {m} () (const String) (const Input) ()
 
-vw : () -> String -> Html String
-vw () s = div [] [input [onchange id], div [] [text s]]
+vw : () -> String -> Html Input
+vw () s = div [] [form [] Set [input [onchange Change]], div [] [text s]]
 
+procInput : Dom m => (d: Var) -> (s:Var) -> Input -> ST m () [s:::State String, d:::Gui {m}]
+procInput d s Set =
+  do
+    inp <- read s
+    domPut d inp
+procInput d s (Change new) =
+    write s new
 
 pageLoop : Dom m => (d: Var) -> (s:Var) -> ST m () [s:::State String, d:::Gui {m}]
 pageLoop d s =
   do
     x <- getInput d
-    domPut d x
+    procInput d s x
     pageLoop d s
 
 
