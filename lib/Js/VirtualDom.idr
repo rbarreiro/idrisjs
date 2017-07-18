@@ -1,5 +1,6 @@
 module VirtualDom
 
+import Control.ST
 import Js.ASync
 
 %include JavaScript "js/virtualdom.js"
@@ -63,10 +64,20 @@ propertyAttribute : String -> String -> Attribute a b
 propertyAttribute name value =
   MkAttribute $ unsafePerformIO $
     jscall
-      "{type:'p',name:%0, value:%1}"
+      "{type:'p', name:%0, value:%1}"
       (String -> String -> JS_IO Ptr)
       name
       value
+
+export
+booleanAttribute : String -> Bool -> Attribute a b
+booleanAttribute name value = 
+  MkAttribute $ unsafePerformIO $
+    jscall
+      "{type:'b', name:%0, value:%1}"
+      (String -> Int -> JS_IO Ptr)
+      name
+      (if value then 1 else 0)
 
 export
 data Style = MkStyle Ptr
