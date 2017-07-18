@@ -1,6 +1,5 @@
 module VirtualDom
 
-import Control.ST
 import Js.ASync
 
 %include JavaScript "js/virtualdom.js"
