@@ -65,7 +65,7 @@ pageLoop d =
 page : Dom m => ST m () []
 page =
   do
-    d <- initBody vw 0 (MkTodoState [] "")
+    d <- initBody [] vw 0 (MkTodoState [] "")
     pageLoop d
 
 main : JS_IO ()

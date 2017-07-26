@@ -23,7 +23,7 @@ pageLoop d s =
 page : Dom m => ST m () []
 page =
   do
-    dom <- initBody vw () "ola"
+    dom <- initBody [] vw () "ola"
     txt <- new ""
     pageLoop dom txt
     delete txt

@@ -3,7 +3,6 @@ module Main
 
 import Js.Dom
 import Control.ST
-import Control.ST.ImplicitCall
 
 data Input = Set
            | Change String
@@ -18,14 +17,14 @@ procInput : Dom m => (d: Var) -> (s:Var) -> Input -> ST m () [s:::State String, 
 procInput d s Set =
   do
     inp <- read s
-    domPut d inp
+    call $ domPut d inp
 procInput d s (Change new) =
     write s new
 
 pageLoop : Dom m => (d: Var) -> (s:Var) -> ST m () [s:::State String, d:::Gui {m}]
 pageLoop d s =
   do
-    x <- getInput d
+    x <- call $ getInput d
     procInput d s x
     pageLoop d s
 
@@ -33,7 +32,7 @@ pageLoop d s =
 page : Dom m => ST m () []
 page =
   do
-    dom <- initBody vw () "ola"
+    dom <- initBody [] vw () "ola"
     txt <- new ""
     pageLoop dom txt
     delete txt

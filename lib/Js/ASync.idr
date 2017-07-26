@@ -101,3 +101,7 @@ interface Wait (m:Type -> Type) where
 export
 implementation Wait ASync where
   wait millis = lift $ setTimeout millis ()
+
+export
+implementation JSRandom ASync where
+  randInt i = lift $ liftJS_IO $ randomInt i

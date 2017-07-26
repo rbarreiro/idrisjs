@@ -135,10 +135,18 @@ makeJSStringObj : List (String, String) -> JS_IO Ptr
 makeJSStringObj xs = makeJSObj $ map (\(x,y)=>(x,believe_me y)) xs
 
 
-export
+public export
 interface Console (m:Type -> Type) where
     consoleLog : String -> STrans m () xs (const xs)
 
 export
 implementation Console JS_IO where
   consoleLog s = lift $ jscall "console.log(%0)" (String -> JS_IO ()) s
+
+public export
+interface JSRandom (m:Type -> Type) where
+  randInt : Int -> STrans m Int xs (const xs)
+
+export
+implementation JSRandom JS_IO where
+  randInt i = lift $ randomInt i
