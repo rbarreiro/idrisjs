@@ -25,6 +25,9 @@ width x = mkStyle "width" (pixels x)
 margin : Double -> Style
 margin x = mkStyle "margin" (pixels x)
 
+fill : String -> Style
+fill x = mkStyle "fill" x
+
 data Transform = MkTransform String
 
 Show Transform where

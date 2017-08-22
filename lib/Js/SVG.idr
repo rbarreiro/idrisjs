@@ -3,7 +3,7 @@ module SVG
 import Js.VirtualDom
 import Js.Html
 import Js.HtmlStyle
-import Data.Fin
+import Data.Vect
 import Js.Utils
 
 public export
@@ -32,7 +32,7 @@ transform x = style $ HtmlStyle.transform x --stringAttribute "transform" $ show
 
 export
 fill : SVGShapeAttribute o => String -> Attribute o a
-fill p = stringAttribute "fill" p
+fill x = style $ HtmlStyle.fill x
 
 export
 stroke : SVGShapeAttribute o => String -> Attribute o a
@@ -41,6 +41,21 @@ stroke p = stringAttribute "stroke" p
 export
 strokeWidth : SVGShapeAttribute o => Double -> Attribute o a
 strokeWidth p = stringAttribute "stroke-width" $ show p
+
+namespace Polygon
+  export
+  implementation SVGAllAttribute 'Polygon where
+
+  export
+  implementation SVGShapeAttribute 'Polygon where
+
+  export
+  points : List (Double, Double) -> Attribute 'Polygon a
+  points pts = stringAttribute "points" $ unwords $ map (\(x,y) => show x ++ " " ++ show y) pts
+
+  export
+  polygon : List (Attribute 'Polygon a) -> SVG a
+  polygon attrs = nodeNS svgNS "polygon" attrs []
 
 namespace Rect
   export
@@ -180,6 +195,46 @@ onlongpress x = customEventListenerAttribute "longpress" (jscall "$JSLIB$html.ad
 export
 onshortpress : SVGAllAttribute o => a -> Attribute o a
 onshortpress x = customEventListenerAttribute "shortpress" (jscall "$JSLIB$html.addShortPressEventListener(%0)" (Ptr -> JS_IO ())) (\_ => pure x)
+
+export
+data FilterRef = MkFilterRef String
+
+public export
+data Effect = FeColorMatrix (Vect 4 (Vect 5 Double))
+
+matrixToAttr : Vect n (Vect m Double) -> String
+matrixToAttr x =
+  unwords $ map (\y=> unwords (map show $ toList y) ) $ toList x
+
+effToSVG : Effect -> SVG a
+effToSVG {a} (FeColorMatrix m) =
+  nodeNS
+    svgNS
+    "feColorMatrix"
+    (the (List (Attribute 'SVG a)) $ [stringAttribute "type" "matrix", stringAttribute "values" $ matrixToAttr m])
+    []
+
+export
+filterDef : List Effect -> (FilterRef -> SVG a) -> SVG a
+filterDef {a} effs x =
+  let
+      i = unsafePerformIO $ randomInt 999999999
+      i' = "f" ++ show i
+      defs = the (SVG a) $
+        nodeNS
+          svgNS
+          "defs"
+          (the (List (Attribute 'SVG a)) $ [])
+          [ the (SVG a) $ nodeNS svgNS "filter" [the (Attribute 'SVG a) $ stringAttribute "id" i'] (map effToSVG effs)
+          ]
+  in
+    g
+      []
+      [defs, x $ MkFilterRef i']
+
+export
+filter : SVGAllAttribute o => FilterRef -> Attribute o a
+filter (MkFilterRef x) = stringAttribute "filter" ("url(#" ++ x ++ ")")
 
 export
 Cast (Fin n) Double where
