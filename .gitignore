@@ -1,9 +1,7 @@
-dist
 *.ibc
 *.js.LDecls
 node_modules
-lib/tests/*.js
-rts/browser_lib_b.js
+tests/*.js
 examples/*.html
 tests/*.js
-lib/js_doc
+js_doc
