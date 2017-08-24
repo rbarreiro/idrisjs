@@ -1,7 +1,7 @@
 # idrisjs
 Js libraries for idris.
 
-The only current working part are the modules to gui as single pape web apps. 
+The only current working part are the modules for making a gui as single pape web app. 
 
 ### To build
 ```shell
