@@ -87,11 +87,18 @@ zIndex x = mkStyle "z-index" (show x)
 backgroundColor : String -> Style
 backgroundColor = mkStyle "background-color"
 
+namespace UserSelect
+
+  public export
+  data UserSelectType = Auto | None | Text | All
+
+  userSelect : UserSelectType -> Style
+  userSelect Auto = mkStyle "user-select" "auto"
+  userSelect None = mkStyle "user-select" "none"
+  userSelect Text = mkStyle "user-select" "text"
+  userSelect All = mkStyle "user-select" "all"
 {-
 
-
-marginTopF : (a -> Double) -> Attribute a b
-marginTopF f = CSSAttribute "marginTop" (DynA $ \(_**x) => pixels $ f x)
 
 padding : Double -> Attribute a f g
 padding x = CSSAttribute "padding" (DynConst $ pixels x)
@@ -151,14 +158,4 @@ boxShadow {a} {f} x =
 
 
 
-namespace UserSelect
-
-  public export
-  data UserSelectType = Auto | None | Text | All
-
-  userSelect : UserSelectType -> Attribute a f g
-  userSelect Auto = CSSAttribute "user-select" $ DynConst "auto"
-  userSelect None = CSSAttribute "user-select" $ DynConst "none"
-  userSelect Text = CSSAttribute "user-select" $ DynConst "text"
-  userSelect All = CSSAttribute "user-select" $ DynConst "all"
   -}

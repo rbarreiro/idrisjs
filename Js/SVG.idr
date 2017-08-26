@@ -28,7 +28,11 @@ svg attrs childs = nodeNS svgNS "svg" attrs (believe_me childs)
 
 export
 transform : SVGAllAttribute o => Transform -> Attribute o a
-transform x = style $ HtmlStyle.transform x --stringAttribute "transform" $ show x
+transform x = style $ HtmlStyle.transform x
+
+export
+nonSelectable : SVGAllAttribute o => Attribute o a
+nonSelectable = style $ userSelect None
 
 export
 fill : SVGShapeAttribute o => String -> Attribute o a
