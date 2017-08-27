@@ -11,7 +11,7 @@ idris --install js.ipkg
 ### Running the example:
 ```shell
 cd examples
-idris --codegen javascript -p js todo.idr -o todo.html
+idris --codegen javascript -p js -p contrib todo.idr -o todo.html
 ```
 then open todo.html
 
