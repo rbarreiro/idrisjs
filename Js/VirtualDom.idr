@@ -70,7 +70,7 @@ propertyAttribute name value =
 
 export
 booleanAttribute : String -> Bool -> Attribute a b
-booleanAttribute name value = 
+booleanAttribute name value =
   MkAttribute $ unsafePerformIO $
     jscall
       "{type:'b', name:%0, value:%1}"
@@ -150,6 +150,25 @@ eventListenerAttributePreventDefault event convert =
       event
       (MkJsFn $ believe_me convert)
 
+export
+implementation Functor (Attribute a) where
+  map f (MkAttribute x) =
+    assert_total $ MkAttribute $ unsafePerformIO $
+      jscall
+        "$JSLIB$virtualdom.mapAttribute(%0, %1)"
+        (JsFn (Ptr -> Ptr) -> Ptr -> JS_IO Ptr)
+        (MkJsFn $ believe_me f)
+        x
+
+export
+implementation Functor  (Node a) where
+  map f (MkNode x) =
+    assert_total $ MkNode $ unsafePerformIO $
+      jscall
+        "$JSLIB$virtualdom.mapNode(%0, %1)"
+        (JsFn (Ptr -> Ptr) -> Ptr -> JS_IO Ptr)
+        (MkJsFn $ believe_me f)
+        x
 
 export
 initialyzeBody : JSIOFifoQueue b -> Node a b -> JS_IO ()

@@ -279,6 +279,26 @@ function availableHeight(){
   return window.innerHeight - parseInt(stl.marginTop) - parseInt(stl.marginBottom) - parseInt(stl.paddingTop) - parseInt(stl.paddingBottom)
 }
 
+function mapAttribute(f, attr){
+  if(attr[0] === 'e'){
+    var res = {};
+    Object.assign(res, attr);
+    res.read = (function(x){return f(attr.read(x))});
+    return res;
+  }else{
+    return attr
+  }
+}
+
+function mapNode(f, node){
+  var res = {};
+    Object.assign(res, node);
+    for(x in res.attrs){
+      res.attrs[x] = mapAttribute(f, node.attrs[x]);
+    }
+  return res;
+}
+
 this.$JSLIB$virtualdom = {
     initialyzeBody: initialyzeBody
   , update: update
@@ -289,6 +309,8 @@ this.$JSLIB$virtualdom = {
   , mkStyle: mkStyle
   , availableWidth: availableWidth
   , availableHeight: availableHeight
+  , mapAttribute : mapAttribute
+  , mapNode : mapNode
 };
 
 }).call(this);
