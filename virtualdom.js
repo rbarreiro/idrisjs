@@ -1,12 +1,12 @@
 (function(){
 
-function processEvent(root, x, i, e){
+function processEvent(x, i, e){
   if(x.attrs[i] !== undefined && x.attrs[i] !== null){
-    $JSLIB$async.putInQueue(x.attrs[i].read(e), root.queue);
+    $JSLIB$async.putInQueue(x.attrs[i].read(e), x.ctx.queue);
   }
 }
 
-function initAttribute(root, node, x, i){
+function initAttribute(node, x, i){
   switch (x.attrs[i].type) {
     case 'r':
       node.setAttribute(x.attrs[i].name, x.attrs[i].value);
@@ -15,13 +15,13 @@ function initAttribute(root, node, x, i){
       node.setAttributeNS(x.attrs[i].ns, x.attrs[i].n, x.attrs[i].value);
       break;
     case 'e':
-      node.addEventListener(x.attrs[i].name, function(e){processEvent(root, x, i, e)});
+      node.addEventListener(x.attrs[i].name, function(e){processEvent(x, i, e)});
       break;
     case 'ec':
-      x.attrs[i].init({domNode: node, process: function(e){ processEvent(root, x, i, e) }});
+      x.attrs[i].init({domNode: node, process: function(e){ processEvent(x, i, e) }});
       break;
     case 'ep':
-      node.addEventListener(x.attrs[i].name, function(e){e.preventDefault();processEvent(root, x, i, e)});
+      node.addEventListener(x.attrs[i].name, function(e){e.preventDefault();processEvent(x, i, e)});
       break;
     case 'p':
       node[x.attrs[i].name] = x.attrs[i].value;
@@ -37,29 +37,30 @@ function initAttribute(root, node, x, i){
   }
 }
 
-function initChildsAndAttributes(root, x){
+function initChildsAndAttributes(x){
   for(let i in x.attrs){
-    initAttribute(root, x.domNode, x, i);
+    initAttribute(x.domNode, x, i);
   }
   for(var i=0; i < x.childs.length; ++i){
     x.childs[i].parent = x.domNode;
-    initialyze(root, x.childs[i]);
+    initialyze(x.ctx, x.childs[i]);
   }
 }
 
-function initialyze(root, x){
+function initialyze(ctx, x){
+  x.ctx = ctx;
   switch (x.type) {
     case 'n':
       var node = document.createElement(x.tag);
       x.domNode = node;
       x.parent.appendChild(node);
-      initChildsAndAttributes(root, x);
+      initChildsAndAttributes(x);
       break;
     case 'nn':
       var node = document.createElementNS(x.ns,x.tag);
       x.domNode = node;
       x.parent.appendChild(node);
-      initChildsAndAttributes(root, x);
+      initChildsAndAttributes(x);
       break;
     case 't':
       var t = document.createTextNode(x.text);
@@ -69,21 +70,22 @@ function initialyze(root, x){
   }
 }
 
-function replaceNode(root, x, y){
+function replaceNode(x, y){
+  y.ctx = x.ctx;
   switch (y.type) {
     case 'n':
       var node = document.createElement(y.tag);
       x.parent.replaceChild(node, x.domNode);
       y.parent = x.parent;
       y.domNode = node;
-      initChildsAndAttributes(root, y);
+      initChildsAndAttributes(y);
       break;
     case 'nn':
       var node = document.createElementNS(y.ns , y.tag);
       x.parent.replaceChild(node, x.domNode);
       y.parent = x.parent;
       y.domNode = node;
-      initChildsAndAttributes(root, y);
+      initChildsAndAttributes(y);
       break;
     case 't':
       var node = document.createTextNode(y.text);
@@ -163,12 +165,12 @@ function calcStyleFramesAndDoUpdates(node, xstl,ystl){
   return [r1,r2];
 }
 
-function updateAttributes(animations, root, x, y){
+function updateAttributes(animations, x, y){
   for(var i in y.attrs){
     if(y.attrs[i].type[0] === 'e'){
       if(x.attrs[i] === undefined){
         x.attrs[i] = y.attrs[i];
-        initAttribute(root, x.domNode, x, i);
+        initAttribute(x.domNode, x, i);
       }
     }else if(x.attrs[i].value !== y.attrs[i].value){
       switch (x.attrs[i].type) {
@@ -211,14 +213,14 @@ function updateAttributes(animations, root, x, y){
   x.attrs = y.attrs;
 }
 
-function updateChilds(animations, root, x, y){
+function updateChilds(animations, x, y){
   var i=0;
   for(; i<Math.min(x.childs.length, y.childs.length); ++i){
-    update_(animations, root, x.childs[i], y.childs[i]);
+    update_(animations, x.childs[i], y.childs[i]);
   }
   for(; i<y.childs.length; ++i){
     y.childs[i].parent = x.domNode;
-    initialyze(root, y.childs[i]);
+    initialyze(x.ctx, y.childs[i]);
     x.childs.push(y.childs[i]);
   }
   for(; i<x.childs.length; ++i){
@@ -227,26 +229,28 @@ function updateChilds(animations, root, x, y){
   x.childs.splice(y.childs.length);
 }
 
-function update_(animations, root, x, y){
+function update_(animations, x, y){
   if(x.type === 'n' && y.type === 'n' && x.tag === y.tag){
-    updateAttributes(animations, root, x, y);
-    updateChilds(animations, root, x, y);
+    updateAttributes(animations, x, y);
+    updateChilds(animations, x, y);
   }else if (x.type === 'nn' && y.type === 'nn' && x.ns === y.ns && x.tag === y.tag){
-    updateAttributes(animations, root, x, y);
-    updateChilds(animations, root, x, y);
+    updateAttributes(animations, x, y);
+    updateChilds(animations, x, y);
   }else if (x.type === 't' && y.type === 't' && y.text === x.text ){
     ;
   }else{
-    replaceNode(root, x, y);
+    replaceNode(x, y);
   }
 }
 
 function update(x,y){
-  update_(undefined, x, x, y)
+  y.ctx = x.ctx;
+  update_(undefined, x, y)
 }
 
 function animate(animations, x, y){
-  update_(animations, x, x, y)
+  y.ctx = x.ctx;
+  update_(animations, x, y)
 }
 
 function updateQueue(queue, x){
@@ -255,8 +259,7 @@ function updateQueue(queue, x){
 
 function initialyzeBody(queue,x){
   x.parent = document.body;
-  x.queue = queue;
-  initialyze(x, x)
+  initialyze({queue: queue}, x)
 }
 
 function clear(x){
