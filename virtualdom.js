@@ -283,7 +283,7 @@ function availableHeight(){
 }
 
 function mapAttribute(f, attr){
-  if(attr[0] === 'e'){
+  if(attr.type[0] === 'e'){
     var res = {};
     Object.assign(res, attr);
     res.read = (function(x){return f(attr.read(x))});
@@ -296,8 +296,11 @@ function mapAttribute(f, attr){
 function mapNode(f, node){
   var res = {};
     Object.assign(res, node);
-    for(x in res.attrs){
+    for(var x in res.attrs){
       res.attrs[x] = mapAttribute(f, node.attrs[x]);
+    }
+    for(var x in res.childs){
+      res.childs[x] = mapNode(f, node.childs[x]);
     }
   return res;
 }
