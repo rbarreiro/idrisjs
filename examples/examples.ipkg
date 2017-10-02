@@ -1,0 +1,4 @@
+{-
+Minimal package file to make Atom happy
+-}
+opts = "-p contrib -p js"
