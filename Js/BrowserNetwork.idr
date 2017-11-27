@@ -1,5 +1,5 @@
 module Js.BrowserNetwork
-
+{-
 import Js.BrowserForeigns
 import public Js.ServiceTypes
 
@@ -20,3 +20,4 @@ callRPC group name p val =
     case decode e2 res of
       Right x => pure x
       Left err => debugError err
+-}

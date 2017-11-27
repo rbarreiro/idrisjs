@@ -1,5 +1,5 @@
 module Js.Json
-
+{-
 import public Lightyear
 import public Lightyear.Char
 import public Lightyear.Strings
@@ -226,3 +226,4 @@ decode x = parsJson x >>= fromJson
 export
 encode : ToJson a => a -> String
 encode x = show $ toJson x
+-}

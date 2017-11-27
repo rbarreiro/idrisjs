@@ -1,5 +1,5 @@
 module Js.ServiceTypes
-
+{-
 import public Js.Json
 import public Data.List
 
@@ -37,3 +37,4 @@ getService name (x :: xs) (There p') = getService name xs p'
 export
 jsonEncoderDecoder : BothJson a => EncoderDecoder a
 jsonEncoderDecoder = MkEncoderDecoder encode decode
+-}

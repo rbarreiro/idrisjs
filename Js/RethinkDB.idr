@@ -1,5 +1,5 @@
 module Js.RethinkDB
-
+{-
 import Effects
 import Js.ASync
 import public Js.Json
@@ -143,3 +143,4 @@ implementation Handler RethinkDB ASync where
 export
 createTable : String -> String -> Eff () [RETHINKDB Connection]
 createTable db tbl = call $ CreatTable db tbl
+-}

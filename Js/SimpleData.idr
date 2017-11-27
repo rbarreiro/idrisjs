@@ -1,5 +1,5 @@
 module SimpleData
-
+{-
 import public Data.HVect
 import public Data.Vect
 import public Js.ASync
@@ -218,3 +218,4 @@ mutual
   encodeJson (STuple x y) (z, w) = JsonArray [encodeJson x z, encodeJson y w]
   encodeJson (SObj x) y = JsonObject $ encodeObjJson x y
   encodeJson SJson x = x
+-}
