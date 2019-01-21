@@ -4,7 +4,7 @@ import Control.ST
 import public Js.Html
 import public Js.VirtualDom
 import public Js.ASync
-
+import public Js.Utils
 
 data GuiRefData : (a : Type) -> (f : a -> Type) -> (g : a -> Type) -> a -> Type where
   MkGuiRefData : ((z:a) -> f z -> Html (g z)) -> JSIORef (y:a ** JSIOFifoQueue (g y)) -> JSIOFifoQueue (g x) -> f x -> Html (g x) -> GuiRefData a f g x
@@ -36,6 +36,7 @@ interface Dom  (m : Type -> Type) where
   domPutM : (dom : Var) -> (y:a) -> f y -> ST m () [dom ::: (DomRef a f g x) :-> (DomRef a f g y)]
   domGet : (dom : Var) -> {x:a} -> ST m (f x) [dom ::: DomRef a f g x]
   getInput : (dom : Var) -> {x:a} -> ST m (g x) [dom ::: DomRef a f g x]
+  schedule : (dom : Var) -> {x:a} -> (t : Int) -> (i : g x) -> ST m () [dom ::: (DomRef a f g x)]
 
 export
 domUpdate : Dom m => (dom : Var) -> {x:a} -> (f x -> f x) -> ST m () [dom ::: (DomRef {m} a f g x)]
@@ -133,6 +134,15 @@ implementation Dom ASync where
       (MkGuiRefData render ref queue st n) <- read v
       r <- lift $ getFromQueue queue
       pure r
+  schedule v {x} t i =
+    do
+      (MkGuiRefData render ref queue st n) <- read v
+      lift $ liftJS_IO $ Utils.setTimeout 
+        (do
+          putInQueue i queue
+        ) 
+        t
+      pure ()
 
 public export
 interface Window (m:Type -> Type) where
