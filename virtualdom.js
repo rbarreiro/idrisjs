@@ -254,7 +254,7 @@ function animate(animations, x, y){
 }
 
 function updateQueue(queue, x){
-  x.queue = queue;
+  x.ctx.queue = queue;
 }
 
 function initialyzeBody(queue,x){

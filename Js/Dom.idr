@@ -119,7 +119,7 @@ implementation Dom ASync where
       pure ()
   domPutM {g} v x newSt =
     do
-      (MkGuiRefData render ref queue st n) <- read v
+      (MkGuiRefData render ref queue_ st n) <- read v
       queue <- lift $ liftJS_IO $ newJSIOFifoQueue (g x)
       lift $ liftJS_IO $ writeJSIORef ref (x**queue)
       n' <- lift $ liftJS_IO $ updateNodeM queue n (render x newSt)
@@ -137,10 +137,10 @@ implementation Dom ASync where
   schedule v {x} t i =
     do
       (MkGuiRefData render ref queue st n) <- read v
-      lift $ liftJS_IO $ Utils.setTimeout 
+      lift $ liftJS_IO $ Utils.setTimeout
         (do
           putInQueue i queue
-        ) 
+        )
         t
       pure ()
 

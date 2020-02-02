@@ -1,18 +1,18 @@
 (function(){
 
 function putInQueue(value, queue){
-  if(queue.callback == undefined){
+  if(queue.callback === undefined){
     queue.queue.push(value);
   }else{
     var callB = queue.callback;
     queue.callback = undefined;
-    callB(value);
+    setTimeout( () => callB(value),0 );
   }
 }
 
 function getFromQueue(queue, callback){
   if(queue.queue.length > 0){
-    callback(queue.queue.shift());
+    setTimeout( () => callback(queue.queue.shift()) );
   }else{
     queue.callback = callback;
   }
